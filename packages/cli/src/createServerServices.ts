@@ -1,6 +1,6 @@
 import { PrometheusMetrics, createDefaultMetrics } from "@mongodb-js/mcp-metrics";
 import { CompositeLogger, Elicitation, Keychain, McpServer, getRandomUUID } from "@mongodb-js/mcp-core";
-import type { IMetrics, IDeviceId } from "@mongodb-js/mcp-types";
+import type { IMetrics, IDeviceId, IUIRegistry, IAppRegistry } from "@mongodb-js/mcp-types";
 import type { Client as AtlasLocalClient } from "@mongodb-js/atlas-local";
 import type { ResourceRegistry, ToolRegistry } from "./cliServer.js";
 import { CliServer } from "./cliServer.js";
@@ -25,6 +25,10 @@ export type CreateServerServicesOptions = {
     tools: ToolRegistry;
     resources: ResourceRegistry;
     logger: CompositeLogger;
+    /** mcp-ui dialect widget registry (embedded tool-result UIs). */
+    uiRegistry?: IUIRegistry;
+    /** MCP Apps (ext-apps) widget registry (`ui://` resources + tool `_meta`). */
+    appRegistry?: IAppRegistry;
 };
 
 /** App-level infrastructure shared by all servers. Session-scoped state is created per request in {@link createServerFromConfig}. */
@@ -40,6 +44,8 @@ export type SharedServerServices = {
     connectionStore: MCPConnectionStore;
     atlasLocalClient: AtlasLocalClient | undefined;
     monitoringServer: ReturnType<typeof createMonitoringServerFromConfig>;
+    uiRegistry?: IUIRegistry;
+    appRegistry?: IAppRegistry;
 };
 
 /** Builds metrics, monitoring server, keychain, device id, connection store and Atlas Local client once. */
@@ -70,6 +76,8 @@ export async function createSharedServicesFromConfig(
         connectionStore,
         atlasLocalClient,
         monitoringServer,
+        uiRegistry: options.uiRegistry,
+        appRegistry: options.appRegistry,
     };
 }
 
@@ -86,8 +94,19 @@ export function createServerFromConfig({
     config: UserConfig;
     sharedServices: SharedServerServices;
 }): CliServer {
-    const { serverMetadata, tools, resources, logger, metrics, keychain, deviceId, connectionStore, atlasLocalClient } =
-        sharedServices;
+    const {
+        serverMetadata,
+        tools,
+        resources,
+        logger,
+        metrics,
+        keychain,
+        deviceId,
+        connectionStore,
+        atlasLocalClient,
+        uiRegistry,
+        appRegistry,
+    } = sharedServices;
 
     // Isolate per-session attributes (e.g. session id set by the HTTP transport).
     const sessionLogger = new CompositeLogger({ loggers: [logger] });
@@ -140,6 +159,8 @@ export function createServerFromConfig({
         tools,
         resources,
         serverMetadata,
+        uiRegistry,
+        appRegistry,
     });
 
     return server;

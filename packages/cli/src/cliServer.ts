@@ -3,7 +3,8 @@ import type { McpServer, Transport, Implementation } from "@modelcontextprotocol
 import type { LogLevel } from "@mongodb-js/mcp-types";
 import { MCP_LOG_LEVELS, LogId } from "@mongodb-js/mcp-core";
 import type { UserConfig } from "./config/userConfig.js";
-import type { CallToolResult, IApiClient, IUIRegistry } from "@mongodb-js/mcp-types";
+import type { CallToolResult, IApiClient, IUIRegistry, IAppRegistry } from "@mongodb-js/mcp-types";
+import { MCP_APPS_RESOURCE_MIME_TYPE } from "@mongodb-js/mcp-types";
 import type { CompositeLogger, Keychain } from "@mongodb-js/mcp-core";
 import type { ConnectionRegistry, ExportsManager } from "@mongodb-js/mcp-tools-mongodb";
 import { type ConnectionErrorHandler } from "@mongodb-js/mcp-tools-mongodb";
@@ -30,6 +31,8 @@ export interface CliServerOptions<TMetrics extends DefaultMetricDefinitions = De
     /** @deprecated Will be removed in a future version. Use `SessionOptions.connectionErrorHandler` instead. */
     connectionErrorHandler: ConnectionErrorHandler;
     uiRegistry?: IUIRegistry;
+    /** Registry of MCP Apps (ext-apps) widgets, advertised via tool `_meta.ui.resourceUri` and served as `ui://` resources when the `mcpApps` preview feature is enabled. */
+    appRegistry?: IAppRegistry;
     metrics: IMetrics<TMetrics>;
     /**
      * An optional list of tools constructors to be registered to the MongoDB
@@ -109,6 +112,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
     public readonly tools: AnyToolBase[] = [];
     public readonly connectionErrorHandler: ConnectionErrorHandler;
     public readonly uiRegistry?: IUIRegistry;
+    public readonly appRegistry?: IAppRegistry;
     public readonly metrics: IMetrics<TMetrics>;
     public readonly serverMetadata: ServerMetadata;
 
@@ -145,6 +149,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
         tools,
         resources,
         uiRegistry,
+        appRegistry,
         metrics,
         serverMetadata,
     }: CliServerOptions<TMetrics> & { session: McpSession }) {
@@ -157,6 +162,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
         this.toolConstructors = tools ?? [];
         this.resourceConstructors = resources ?? [];
         this.uiRegistry = uiRegistry;
+        this.appRegistry = appRegistry;
         this.metrics = metrics;
         this.serverMetadata = serverMetadata;
 
@@ -203,6 +209,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
         // Register resources after the server is initialized so they can listen to events like
         // connection events.
         this.registerResources();
+        this.registerAppResources();
         this.mcpServer.server.registerCapabilities({
             logging: {},
             resources: { listChanged: true, subscribe: true },
@@ -379,6 +386,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
                 elicitation: this.elicitation,
                 metrics: this.metrics,
                 uiRegistry: this.uiRegistry,
+                appRegistry: this.appRegistry,
             });
             if (tool.register(this)) {
                 this.tools.push(tool);
@@ -390,6 +398,38 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
         for (const resourceConstructor of this.resourceConstructors) {
             const resource = new resourceConstructor(this.session, this.telemetry);
             resource.register(this);
+        }
+    }
+
+    /**
+     * Registers MCP Apps (ext-apps) `ui://` resources so hosts can fetch the
+     * widget HTML via `resources/read`. Only active when the `mcpApps` preview
+     * feature is enabled; the matching tool `_meta.ui.resourceUri` metadata is
+     * added separately (see {@link ToolBase.toolMeta}).
+     */
+    private registerAppResources(): void {
+        if (!this.session.config.previewFeatures.includes("mcpApps") || !this.appRegistry) {
+            return;
+        }
+        for (const { toolName, resourceUri } of this.appRegistry.list()) {
+            this.mcpServer.registerResource(
+                `mcp-app-${toolName}`,
+                resourceUri,
+                {
+                    description: `Interactive UI (MCP App) for the "${toolName}" tool`,
+                    mimeType: MCP_APPS_RESOURCE_MIME_TYPE,
+                    _meta: { ui: { prefersBorder: true } },
+                },
+                async (uri) => {
+                    const html = await this.appRegistry?.getHtml(toolName);
+                    if (!html) {
+                        throw new Error(`No MCP App registered for tool "${toolName}"`);
+                    }
+                    return {
+                        contents: [{ uri: uri.href, mimeType: MCP_APPS_RESOURCE_MIME_TYPE, text: html }],
+                    };
+                }
+            );
         }
     }
 

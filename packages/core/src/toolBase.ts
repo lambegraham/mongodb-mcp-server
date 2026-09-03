@@ -19,6 +19,7 @@ import type {
     IElicitation,
     PreviewFeature,
     IUIRegistry,
+    IAppRegistry,
     IMetrics,
     DefaultMetricDefinitions,
     OperationType,
@@ -134,6 +135,13 @@ export type ToolConstructorParams<
     metrics: IMetrics<TMetricsDefinitions>;
 
     uiRegistry?: IUIRegistry;
+
+    /**
+     * Registry of MCP Apps (ext-apps) widgets, used to advertise a tool's
+     * `ui://` resource via `_meta.ui.resourceUri` when the `mcpApps` preview
+     * feature is enabled.
+     */
+    appRegistry?: IAppRegistry;
 };
 
 /**
@@ -445,11 +453,21 @@ export abstract class ToolBase<
             maxRequestPayloadBytes = this.session.config.httpBodyLimit;
         }
 
+        // MCP Apps (ext-apps): advertise the widget resource for this tool.
+        // The metadata is static at registration time, so it is gated on the
+        // preview flag only, not on the client's extension capabilities (those
+        // arrive at initialize, after tools are registered).
+        const appResourceUri = this.isFeatureEnabled("mcpApps")
+            ? this.appRegistry?.resourceUriFor(this.name)
+            : undefined;
+
         return {
             /** The transport protocol this server is using */
             "com.mongodb/transport": transport,
             /** Maximum request payload size in bytes for this transport */
             "com.mongodb/maxRequestPayloadBytes": maxRequestPayloadBytes,
+            /** MCP Apps (ext-apps) UI resource, rendered by supporting hosts */
+            ...(appResourceUri ? { ui: { resourceUri: appResourceUri } } : {}),
         };
     }
 
@@ -685,6 +703,8 @@ export abstract class ToolBase<
 
     private readonly uiRegistry?: IUIRegistry;
 
+    private readonly appRegistry?: IAppRegistry;
+
     constructor({
         name,
         category,
@@ -694,6 +714,7 @@ export abstract class ToolBase<
         elicitation,
         metrics,
         uiRegistry,
+        appRegistry,
     }: ToolConstructorParams<TSession, TMetricsDefinitions>) {
         this.name = name;
         this.category = category;
@@ -703,6 +724,7 @@ export abstract class ToolBase<
         this.elicitation = elicitation;
         this.metrics = metrics;
         this.uiRegistry = uiRegistry;
+        this.appRegistry = appRegistry;
     }
 
     /**

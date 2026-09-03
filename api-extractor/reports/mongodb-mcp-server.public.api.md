@@ -227,6 +227,17 @@ export function applyConfigOverrides<TUserConfig extends UserConfig = UserConfig
     request?: TransportRequestContext;
 }): TUserConfig;
 
+// @public
+export class AppRegistry implements IAppRegistry {
+    getHtml(toolName: string): Promise<string | null>;
+    // (undocumented)
+    has(toolName: string): boolean;
+    // (undocumented)
+    list(): AppResourceInfo[];
+    // (undocumented)
+    resourceUriFor(toolName: string): string | undefined;
+}
+
 // @public (undocumented)
 export class AtlasTelemetry implements ITelemetry {
     protected constructor(config: TelemetryConfig);
@@ -273,6 +284,8 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
     constructor(input: CliServerOptions<TMetrics> & {
         session: McpSession;
     });
+    // (undocumented)
+    readonly appRegistry?: IAppRegistry;
     close(): Promise<void>;
     // (undocumented)
     connect(transport: Transport): Promise<void>;
@@ -309,6 +322,7 @@ export class CliServer<TMetrics extends DefaultMetricDefinitions = DefaultMetric
 
 // @public (undocumented)
 export interface CliServerOptions<TMetrics extends DefaultMetricDefinitions = DefaultMetricDefinitions> {
+    appRegistry?: IAppRegistry;
     // @deprecated (undocumented)
     connectionErrorHandler: ConnectionErrorHandler;
     // (undocumented)
@@ -1224,6 +1238,7 @@ export const UserConfigSchema: z.ZodObject<{
     voyageApiKey: z.ZodDefault<z.ZodString>;
     previewFeatures: z.ZodDefault<z.ZodPreprocess<z.ZodArray<z.ZodEnum<{
         mcpUI: "mcpUI";
+        mcpApps: "mcpApps";
     }>>>>;
     allowRequestOverrides: z.ZodDefault<z.ZodPreprocess<z.ZodBoolean>>;
     dryRun: z.ZodDefault<z.ZodBoolean>;

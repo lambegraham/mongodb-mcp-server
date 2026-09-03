@@ -199,6 +199,17 @@ export interface ApiClientOptions {
 }
 
 // @public
+export class AppRegistry implements IAppRegistry {
+    getHtml(toolName: string): Promise<string | null>;
+    // (undocumented)
+    has(toolName: string): boolean;
+    // (undocumented)
+    list(): AppResourceInfo[];
+    // (undocumented)
+    resourceUriFor(toolName: string): string | undefined;
+}
+
+// @public
 export type AtlasClusterConnectionInfo = {
     username: string;
     projectId: string;
@@ -643,7 +654,7 @@ export type PerfAdvisorToolMetadata = AtlasMetadata & ConnectionMetadata & {
 export type PreviewFeature = (typeof previewFeatureValues)[number];
 
 // @public (undocumented)
-export const previewFeatureValues: readonly ["mcpUI"];
+export const previewFeatureValues: readonly ["mcpUI", "mcpApps"];
 
 // @public (undocumented)
 export interface ReadyExport extends CommonExportData {
@@ -832,6 +843,7 @@ export type ToolConstructorParams<TSession extends IToolSession = IToolSession, 
     elicitation: IElicitation;
     metrics: IMetrics<TMetricsDefinitions>;
     uiRegistry?: IUIRegistry;
+    appRegistry?: IAppRegistry;
 };
 
 // @public

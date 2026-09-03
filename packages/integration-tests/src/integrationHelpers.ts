@@ -221,8 +221,15 @@ export function setupIntegrationTest(
 
         let uiRegistry = serverOptions?.uiRegistry;
         if (!uiRegistry && userConfig.previewFeatures.includes("mcpUI")) {
-            const { UIRegistry } = await import("@mongodb-js/mcp-ui");
+            // The `/registry` subpath avoids loading browser-only React components in node.
+            const { UIRegistry } = await import("@mongodb-js/mcp-ui/registry");
             uiRegistry = new UIRegistry();
+        }
+
+        let appRegistry = serverOptions?.appRegistry;
+        if (!appRegistry && userConfig.previewFeatures.includes("mcpApps")) {
+            const { AppRegistry } = await import("@mongodb-js/mcp-ui/registry");
+            appRegistry = new AppRegistry();
         }
 
         const {
@@ -238,6 +245,7 @@ export function setupIntegrationTest(
             elicitation,
             connectionErrorHandler,
             uiRegistry,
+            appRegistry,
             metrics: new MockMetrics(),
             serverMetadata: {
                 mcpServerName: "test-server",

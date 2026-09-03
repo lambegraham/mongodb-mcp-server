@@ -16,6 +16,7 @@ import type { ElicitInputRequiredParams } from '@mongodb-js/mcp-types';
 import { ElicitRequestSchema } from '@mongodb-js/mcp-types';
 import { EventEmitter } from 'events';
 import type { EventMap } from '@mongodb-js/mcp-types';
+import type { IAppRegistry } from '@mongodb-js/mcp-types';
 import type { ICompositeLogger } from '@mongodb-js/mcp-types';
 import { IElicitation } from '@mongodb-js/mcp-types';
 import type { IKeychain } from '@mongodb-js/mcp-types';
@@ -532,6 +533,7 @@ export type ToolConstructorParams<TSession extends IToolSession = IToolSession, 
     elicitation: IElicitation;
     metrics: IMetrics<TMetricsDefinitions>;
     uiRegistry?: IUIRegistry;
+    appRegistry?: IAppRegistry;
 };
 
 // @public (undocumented)

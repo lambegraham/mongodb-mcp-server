@@ -4,9 +4,22 @@
 
 ```ts
 
+import type { AppResourceInfo } from '@mongodb-js/mcp-types';
+import type { IAppRegistry } from '@mongodb-js/mcp-types';
 import type { IUIRegistry } from '@mongodb-js/mcp-types';
 import { ReactElement } from 'react';
 import type { UIRegistryOptions } from '@mongodb-js/mcp-types';
+
+// @public
+export class AppRegistry implements IAppRegistry {
+    getHtml(toolName: string): Promise<string | null>;
+    // (undocumented)
+    has(toolName: string): boolean;
+    // (undocumented)
+    list(): AppResourceInfo[];
+    // (undocumented)
+    resourceUriFor(toolName: string): string | undefined;
+}
 
 // @public (undocumented)
 export const ListDatabases: () => ReactElement | null;
